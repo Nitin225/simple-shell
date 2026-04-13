@@ -15,9 +15,15 @@ int main(){
         cout<< "shell> ";
         getline(cin, input);
         istringstream iss(input);
-
+        
         while(iss >> token){
             args.push_back(token);
+        }
+        if (args.empty()) continue;
+
+        if (args[0] == "cd") {
+        chdir(args[1].c_str());
+        continue;
         }
 
         if (input == "exit") break;
@@ -28,6 +34,7 @@ int main(){
         else {
             wait(nullptr);
         }
+
 
 
     }
