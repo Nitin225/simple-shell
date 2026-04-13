@@ -1,7 +1,10 @@
 #include<iostream>
 #include<string>
-#include <sstream>
-#include <vector>
+#include<sstream>
+#include<vector>
+#include<unistd.h>
+#include<sys/wait.h>
+#include<cstring>
 using namespace std;
 
 int main(){
@@ -18,8 +21,13 @@ int main(){
         }
 
         if (input == "exit") break;
-        cout << "Command: " << args[0] << endl;
-        cout << "Args count: " << args.size() << endl;
+        pid_t pip = fork();
+        if (pip == 0) {
+            execlp(args[0].c_str(), args[0].c_str(), nullptr);
+        }
+        else {
+            wait(nullptr);
+        }
 
 
     }
