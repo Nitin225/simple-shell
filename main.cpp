@@ -29,7 +29,12 @@ int main(){
         if (args[0] == "exit") break;
         pid_t pip = fork();
         if (pip == 0) {
-            execlp(args[0].c_str(), args[0].c_str(), nullptr);
+            vector<char*> cargs;
+            for (auto& arg : args) {
+                cargs.push_back(&arg[0]);
+            }
+            cargs.push_back(nullptr); // array ka end
+            execvp(cargs[0], cargs.data());
             cerr << "Command invalid: " << args[0] << endl;
             exit(1);  
         }
