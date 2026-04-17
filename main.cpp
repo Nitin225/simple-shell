@@ -30,7 +30,7 @@ int main(){
         pid_t pip = fork();
         if (pip == 0) {
             execlp(args[0].c_str(), args[0].c_str(), nullptr);
-            cerr << "Command not found: " << args[0] << endl;
+            cerr << "Command invalid: " << args[0] << endl;
             exit(1);  
         }
         else {
