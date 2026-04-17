@@ -40,6 +40,56 @@ int main(){
             cmd_args.push_back(args[i]);
         }
 
+        string pipe_cmd = "";
+        vector<string> left_args, right_args;
+        bool has_pipe = false;
+
+        for (int i = 0; i < args.size(); i++) {
+            if (args[i] == "|") {
+                has_pipe = true;
+                for (int j = i+1; j < args.size(); j++) {
+                    right_args.push_back(args[j]);
+                }
+                break;
+            }
+            left_args.push_back(args[i]);
+        }
+
+        if (has_pipe) {
+        int pipefd[2];
+        pipe(pipefd);
+        
+        pid_t left = fork();
+        if (left == 0) {
+            dup2(pipefd[1], STDOUT_FILENO); 
+            close(pipefd[0]);
+            close(pipefd[1]);
+            vector<char*> cargs;
+            for (auto& arg : left_args) cargs.push_back(&arg[0]);
+            cargs.push_back(nullptr);
+            execvp(cargs[0], cargs.data());
+            exit(1);
+        }
+        
+        pid_t right = fork();
+        if (right == 0) {
+            dup2(pipefd[0], STDIN_FILENO); 
+            close(pipefd[0]);
+            close(pipefd[1]);
+            vector<char*> cargs;
+            for (auto& arg : right_args) cargs.push_back(&arg[0]);
+            cargs.push_back(nullptr);
+            execvp(cargs[0], cargs.data());
+            exit(1);
+        }
+        
+        close(pipefd[0]);
+        close(pipefd[1]);
+        wait(nullptr);
+        wait(nullptr);
+        continue;
+    }
+
         pid_t pip = fork();
         if (pip == 0) {
             if (!outfile.empty()) {
