@@ -26,16 +26,16 @@ int main(){
         continue;
         }
 
-        if (input == "exit") break;
+        if (args[0] == "exit") break;
         pid_t pip = fork();
         if (pip == 0) {
             execlp(args[0].c_str(), args[0].c_str(), nullptr);
+            cerr << "Command not found: " << args[0] << endl;
+            exit(1);  
         }
         else {
             wait(nullptr);
         }
-
-
 
     }
 
