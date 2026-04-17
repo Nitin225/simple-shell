@@ -1,6 +1,0 @@
-README.md
-a.out
-main.cpp
-main.exe
-output.txt
-shell
