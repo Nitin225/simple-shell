@@ -6,7 +6,35 @@
 #include<sys/wait.h>
 #include <fcntl.h>
 #include<cstring>
+#include <cstdlib>
 using namespace std;
+
+void builtinCd(const vector<string>& args) {
+    string target;
+    if (args.size() < 2) {
+        const char* home = getenv("HOME");
+        if (!home) {
+            cerr << "shell: cd: HOME not set\n";
+            return;
+        }
+        target = home;
+    } else {
+        target = args[1];
+    }
+
+    if (chdir(target.c_str()) != 0) {
+        cerr << "shell: cd: " << target << ": No such file or directory\n";
+    }
+}
+
+void builtinPwd() {
+    char buf[4096];
+    if (getcwd(buf, sizeof(buf)) != nullptr) {
+        cout << buf << "\n";
+    } else {
+        perror("shell: pwd");
+    }
+}
 
 int main(){
     while(true){
@@ -23,11 +51,22 @@ int main(){
         if (args.empty()) continue;
 
         if (args[0] == "cd") {
-        chdir(args[1].c_str());
-        continue;
+            builtinCd(args);
+            continue;
         }
 
-        if (args[0] == "exit") break;
+        if (args[0] == "pwd") {
+            builtinPwd();
+            continue;
+        }
+
+        if (args[0] == "exit") {
+            int code = 0;
+            if (args.size() >= 2) {
+                code = atoi(args[1].c_str());
+            }
+            exit(code);
+        }
 
         string outfile = "";
         vector<string> cmd_args;
