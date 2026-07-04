@@ -1,76 +1,44 @@
 # Simple Shell
 
-A Unix-like command shell implemented from scratch in C++, built to understand process management, file descriptors, and inter-process communication at the OS level.
+A Unix-like command shell built in C++ using low-level system calls (`fork`, `execvp`, `pipe`, `dup2`).
 
 ## Features
 
-- **Built-in commands**: `cd` (with `HOME` fallback and error handling), `pwd`, `exit` (with custom exit status codes)
-- **I/O redirection**: `<` (input), `>` (output, truncate), `>>` (output, append)
-- **Piping**: supports chaining any number of commands (`cmd1 | cmd2 | cmd3 | ...`), not just a single pipe
-- **Error handling**: invalid commands, missing files, malformed redirection syntax, and empty commands are caught and reported without crashing the shell
+- **Command execution** — runs any executable via `fork()` + `execvp()`
+- **Built-in commands** — `cd` (with `HOME` fallback), `pwd`, `exit`
+- **Multi-stage pipes** — supports chaining any number of commands: `cmd1 | cmd2 | cmd3`
+- **I/O redirection** — `<` (input), `>` (output, truncate), `>>` (output, append)
+- **Combined pipes + redirection** — e.g. `grep foo < in.txt | sort > out.txt`
+- **Error handling** — invalid commands, missing files, and malformed syntax fail gracefully instead of crashing
 
-## Project Structure
-
-The codebase is split into separate header/source files by responsibility, rather than living in one file:
-
-```
-main.cpp               — the shell's main input loop and command dispatch logic
-shell_builtins.h/.cpp  — built-in commands that must run in the shell's own process (cd, pwd)
-shell_utils.h/.cpp     — parsing utilities (splitting input on '|' into separate commands)
-```
-
-Each `.h` file declares function signatures only; the matching `.cpp` file holds the actual implementation. `main.cpp` includes the headers it needs and calls into them, without knowing (or needing to know) the implementation details — a basic form of separating interface from implementation.
-
-## How It Works
-
-The shell reads a line of input, tokenizes it, and dispatches it in one of three ways:
-
-1. **Built-ins** (`cd`, `pwd`, `exit`) run directly in the shell process — no `fork()` needed, since they must affect the shell's own state (e.g. `cd` changes the shell's working directory).
-2. **Single commands** (with optional `<`, `>`, `>>`) are run in a forked child process. The child sets up any file redirections via `dup2()` before calling `execvp()` to replace itself with the target program.
-3. **Piped commands** (`cmd1 | cmd2 | ... | cmdN`) are split into N separate commands. The shell creates N−1 pipes and forks N child processes, wiring each child's stdin/stdout to the appropriate pipe ends so data flows from one command to the next — the same mechanism real shells use.
-
-### Key OS concepts demonstrated
-- `fork()` — process creation and duplication
-- `execvp()` — replacing a process image with a new program
-- `pipe()` — unidirectional inter-process communication
-- `dup2()` — file descriptor redirection
-- `wait()` / `waitpid()` — process synchronization and zombie prevention
-- Proper file descriptor cleanup to avoid pipe deadlocks/hangs
-
-## Build & Run
+## Build
 
 ```bash
 g++ -o shell main.cpp shell_builtins.cpp shell_utils.cpp
 ./shell
 ```
 
-All three `.cpp` files must be compiled together, since `main.cpp` only contains declarations (via the headers) for the builtins and utility functions — their actual definitions live in the other two `.cpp` files and need to be linked in.
+## Usage
 
-## Usage Examples
-
-```
-shell> pwd
-/home/user/simple-shell
-
-shell> cd ..
-shell> ls > output.txt
-shell> cat < output.txt
-shell> echo "log entry" >> output.txt
-
+```bash
 shell> ls | grep .cpp | wc -l
-shell> cat main.cpp | grep include | sort
-
-shell> exit 0
+shell> cat < input.txt > output.txt
+shell> cd ..
+shell> exit
 ```
 
-## Known Limitations
+## Project Structure
 
-- No support for background execution (`&`), job control, or signal handling (e.g. `Ctrl+C` forwarding)
-- No environment variable expansion (`$VAR`) or wildcard globbing (`*.txt`)
-- No command history
+| File | Responsibility |
+|---|---|
+| `main.cpp` | REPL loop, input parsing, pipe/process orchestration |
+| `shell_builtins.cpp/h` | Built-in commands (`cd`, `pwd`) |
+| `shell_utils.cpp/h` | Pipe splitting and redirection parsing |
 
-These were intentionally scoped out to focus on core process/IPC mechanics; they're natural next steps for extending the project.
+## How it works
 
-## Tech Stack
-
-C++ · POSIX system calls (`unistd.h`, `sys/wait.h`, `fcntl.h`) · WSL/Linux
+1. Input is tokenized into arguments.
+2. Tokens are split into pipeline stages on `|`.
+3. Each stage is parsed independently for `<`, `>`, `>>` redirection.
+4. For N stages, N-1 pipes are created; each stage forks a child process, wires its stdin/stdout via `dup2`, and `execvp`s the command.
+5. The parent closes all pipe file descriptors and waits for every child before showing the next prompt.
